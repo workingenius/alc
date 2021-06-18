@@ -19,5 +19,5 @@ EOF
 function! Alc(...)
     python alc_main(*vim.eval('a:000'))
 endfunction
-command! -nargs=+ Alc call Alc(<f-args>)
+command! -nargs=* Alc call Alc(<f-args>)
 

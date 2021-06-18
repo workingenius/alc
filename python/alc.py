@@ -31,7 +31,7 @@ def del_origin(buffer):
         _origins.pop(buffer.number)
 
 
-def main(cmd, *args):
+def main(*args):
     vim.command(':set hidden')
     # check if working as a view
     onum = get_origin(vim.current.buffer)
@@ -54,6 +54,12 @@ def main(cmd, *args):
 
         # copy from origin to here
         vim.current.buffer[:] = contents
+
+    if args:
+        cmd = args[0]
+        args = args[1:]
+    else:
+        return
 
 
     if cmd == 'ftag':
@@ -97,9 +103,10 @@ def cmd_ftag(*args):
         pass
 
     curcontents = vim.current.buffer
-    line_lst, newcurline = _analyzed[vim.buffers[get_origin(vim.current.buffer)]].filter_out(_filter_out_tags, 1)
+    line_lst, newcurline = _analyzed[vim.buffers[get_origin(vim.current.buffer)]].filter_out(_filter_out_tags, vim.current.window.cursor[0])
     if len(line_lst) != len(curcontents):
         vim.current.buffer[:] = line_lst
+        vim.command(': {}'.format(newcurline))
 
     # basecontents = list(vim.buffers[get_origin(vim.current.buffer)])
     # curcontents = vim.current.buffer
