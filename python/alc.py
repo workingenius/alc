@@ -2,6 +2,7 @@ from functools import wraps
 import re
 
 import vim
+from analyze import analyze
 
 
 def temp_modify(proc):
@@ -44,6 +45,7 @@ def main(cmd, *args):
             vim.command('bw')
     else:
         print('This is not a alc view, create one and copy contents')
+        _analyzed[vim.current.buffer] = analyze(vim.current.buffer)
         contents = list(vim.current.buffer)
         onum = vim.current.buffer.number
         vim.command(':enew')
@@ -53,11 +55,15 @@ def main(cmd, *args):
         # copy from origin to here
         vim.current.buffer[:] = contents
 
+
     if cmd == 'ftag':
         cmd_ftag(*args)
 
     else:
         print('Unrecognized alc command {}'.format(cmd))
+
+
+_analyzed = {}
 
 
 _filter_out_tags = set()
@@ -90,14 +96,19 @@ def cmd_ftag(*args):
     if old_fot != _filter_out_tags:
         pass
 
-    basecontents = list(vim.buffers[get_origin(vim.current.buffer)])
     curcontents = vim.current.buffer
-    newcontents = []
-    ptn = re.compile('|'.join(sorted(_filter_out_tags)))
-    for line in basecontents:
-        if not ptn.search(line):
-            newcontents.append(line)
+    line_lst, newcurline = _analyzed[vim.buffers[get_origin(vim.current.buffer)]].filter_out(_filter_out_tags, 1)
+    if len(line_lst) != len(curcontents):
+        vim.current.buffer[:] = line_lst
 
-    if len(newcontents) != len(curcontents):
-        vim.current.buffer[:] = newcontents
+    # basecontents = list(vim.buffers[get_origin(vim.current.buffer)])
+    # curcontents = vim.current.buffer
+    # newcontents = []
+    # ptn = re.compile('|'.join(sorted(_filter_out_tags)))
+    # for line in basecontents:
+    #     if not ptn.search(line):
+    #         newcontents.append(line)
+
+    # if len(newcontents) != len(curcontents):
+    #     vim.current.buffer[:] = newcontents
 
