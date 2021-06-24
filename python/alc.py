@@ -3,6 +3,7 @@ import re
 
 import vim
 from analyze import analyze
+from bufferwrapper import BufferWrapper as BW
 
 
 def temp_modify(proc):
@@ -15,52 +16,17 @@ def temp_modify(proc):
     return _proc_modify
 
 
-_origins = {}
-
-
-def get_origin(buffer):
-    return _origins.get(buffer.number)
-
-
-def set_origin(buffer, origin):
-    _origins[buffer.number] = origin
-
-
-def del_origin(buffer):
-    if buffer in _origins:
-        _origins.pop(buffer.number)
-
-
 def main(*args):
     vim.command(':set hidden')
-    # check if working as a view
-    onum = get_origin(vim.current.buffer)
-    if onum is not None:
-        print('This is a alc view')
-        # if it is, the origin may have been deleted
-        if onum in (b.number for b in vim.buffers):
-            pass
-        else:
-            print('It\'s origin is removed')
-            vim.command('bw')
-    else:
-        print('This is not a alc view, create one and copy contents')
-        _analyzed[vim.current.buffer] = analyze(vim.current.buffer)
-        contents = list(vim.current.buffer)
-        onum = vim.current.buffer.number
-        vim.command(':enew')
-        cnum = vim.current.buffer.number
-        set_origin(vim.current.buffer, onum)
-
-        # copy from origin to here
-        vim.current.buffer[:] = contents
+    bw = BW(vim.current.buffer)
+    if not bw.is_prepared:
+        bw.prepare()
 
     if args:
         cmd = args[0]
         args = args[1:]
     else:
         return
-
 
     if cmd == 'ftag':
         cmd_ftag(*args)
@@ -69,14 +35,15 @@ def main(*args):
         print('Unrecognized alc command {}'.format(cmd))
 
 
-_analyzed = {}
-
-
-_filter_out_tags = set()
-
-
 @temp_modify
 def cmd_ftag(*args):
+    _analyzed = BW.current().analyzed
+
+    _filter_out_tags = getattr(_analyzed, 'filter_out_tags', None)
+    if _filter_out_tags is None:
+        setattr(_analyzed, 'filter_out_tags', set())
+        _filter_out_tags = getattr(_analyzed, 'filter_out_tags', None)
+
     if len(args) == 0:
         print(sorted(_filter_out_tags))
         return
@@ -103,19 +70,8 @@ def cmd_ftag(*args):
         pass
 
     curcontents = vim.current.buffer
-    line_lst, newcurline = _analyzed[vim.buffers[get_origin(vim.current.buffer)]].filter_out(_filter_out_tags, vim.current.window.cursor[0])
+    line_lst, newcurline = _analyzed.filter_out(_filter_out_tags, vim.current.window.cursor[0])
     if len(line_lst) != len(curcontents):
         vim.current.buffer[:] = line_lst
         vim.command(': {}'.format(newcurline))
-
-    # basecontents = list(vim.buffers[get_origin(vim.current.buffer)])
-    # curcontents = vim.current.buffer
-    # newcontents = []
-    # ptn = re.compile('|'.join(sorted(_filter_out_tags)))
-    # for line in basecontents:
-    #     if not ptn.search(line):
-    #         newcontents.append(line)
-
-    # if len(newcontents) != len(curcontents):
-    #     vim.current.buffer[:] = newcontents
 
