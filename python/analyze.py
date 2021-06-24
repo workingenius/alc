@@ -22,23 +22,34 @@ class Analyzed(object):
     def __init__(self, line_lst):
         self.line_lst = list(line_lst)
         self.show_bm = [True] * len(line_lst)
-    
-    def filter_out(self, tags, curline):
-        tags = tags or []
-        curline = curline or 1  # line number starts from 1
+        self._line_filter = None
 
-        show_bm = []
-        new_line_lst = []
-        for line in self.line_lst:
-            if line.tag not in tags:
-                show_bm.append(True)
-                new_line_lst.append(line.raw)
-            else:
-                show_bm.append(False)
+    def filter(self, curline):
+        if not self.line_filter:
+            show_bm = [True] * len(self.line_lst)
+            new_line_lst = [l.raw for l in self.line_lst]
 
-        curline = calc_curline(self.show_bm, show_bm, curline)
+        else:
+            show_bm = []
+            new_line_lst = []
+            for line in self.line_lst:
+                if self.line_filter.test(line):
+                    show_bm.append(True)
+                    new_line_lst.append(line.raw)
+                else:
+                    show_bm.append(False)
+
+        cur_line = calc_curline(self.show_bm, show_bm, curline)
         self.show_bm = show_bm
         return new_line_lst, curline
+    
+    @property
+    def line_filter(self):
+        return self._line_filter
+
+    @line_filter.setter
+    def line_filter(self, v):
+        self._line_filter = v
 
 
 def calc_curline(old_show_bm, new_show_bm, curline):

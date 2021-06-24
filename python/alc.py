@@ -4,6 +4,7 @@ import re
 import vim
 from analyze import analyze
 from bufferwrapper import BufferWrapper as BW
+from linepred import *
 
 
 def temp_modify(proc):
@@ -69,8 +70,11 @@ def cmd_ftag(*args):
     if old_fot != _filter_out_tags:
         pass
 
+    line_filter = LPBanned([LPTag(tag) for tag in _filter_out_tags])
+    _analyzed.line_filter = line_filter if _filter_out_tags else None
+
     curcontents = vim.current.buffer
-    line_lst, newcurline = _analyzed.filter_out(_filter_out_tags, vim.current.window.cursor[0])
+    line_lst, newcurline = _analyzed.filter(vim.current.window.cursor[0])
     if len(line_lst) != len(curcontents):
         vim.current.buffer[:] = line_lst
         vim.command(': {}'.format(newcurline))
